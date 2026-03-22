@@ -22,6 +22,7 @@ import * as Joi from 'joi';
         DB_PASSWORD: Joi.string().required(),
         DB_DATABASE: Joi.string().required(),
         PORT: Joi.number().default(3000).required(),
+        JWT_SECRET: Joi.string().required(),
       }),
     }),
     DatabaseModule,

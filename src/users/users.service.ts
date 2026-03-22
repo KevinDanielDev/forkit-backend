@@ -1,4 +1,122 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 
+import { Repository } from 'typeorm';
+
+import { isEmail, isUUID } from 'class-validator';
+
+import { User } from './entities/user.entity';
+import { CreateUserDto } from './dto/signup-user.dto';
+
+/**
+ * Service responsible for managing user-related operations.
+ * Provides methods for creating, finding, and updating user records.
+ */
 @Injectable()
-export class UsersService {}
+export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
+  constructor(
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
+  ) {}
+
+  /**
+   * Finds a user by a search term that can be a UUID, email, or phone number.
+   * Automatically detects the type of search term and queries accordingly.
+   *
+   * @param {string} term - The search term (UUID, email, or phone number)
+   * @returns {Promise<User | null>} The found user or null if not found
+   * @throws {InternalServerErrorException} When an unexpected error occurs
+   *
+   * @example
+   * // Find by UUID
+   * const user = await usersService.findByTerm('123e4567-e89b-12d3-a456-426614174000');
+   *
+   * @example
+   * // Find by email
+   * const user = await usersService.findByTerm('user@example.com');
+   *
+   * @example
+   * // Find by phone
+   * const user = await usersService.findByTerm('+1234567890');
+   */
+  public async findByTerm(term: string) {
+    try {
+      let user: User | null;
+
+      switch (true) {
+        case isUUID(term):
+          user = await this.userRepository.findOneBy({ id: term });
+          break;
+        case isEmail(term):
+          user = await this.userRepository.findOneBy({ email: term });
+          break;
+        default:
+          user = await this.userRepository.findOneBy({ phone: term });
+          break;
+      }
+
+      return user;
+    } catch (error) {
+      this.logger.error(error);
+
+      if (error instanceof NotFoundException) throw error;
+
+      throw new InternalServerErrorException(
+        'Internal server error, please review logs',
+      );
+    }
+  }
+
+  /**
+   * Creates a new user in the database.
+   *
+   * @param {CreateUserDto} createUserDto - The data transfer object containing user information
+   * @returns {Promise<User>} The newly created user entity
+   * @throws {InternalServerErrorException} When an error occurs during user creation
+   *
+   * @example
+   * const newUser = await usersService.create({
+   *   email: 'user@example.com',
+   *   password: 'hashedPassword',
+   *   phone: '+1234567890'
+   * });
+   */
+  public async create(createUserDto: CreateUserDto) {
+    try {
+      const user = this.userRepository.create(createUserDto);
+
+      return await this.userRepository.save(user);
+    } catch (error) {
+      this.logger.error(error);
+
+      throw new InternalServerErrorException(
+        'Internal server error, please review logs',
+      );
+    }
+  }
+
+  /**
+   * Updates the refresh token for a user identified by the given term.
+   *
+   * @param {string} term - The user identifier (UUID, email, or phone)
+   * @param {string | null} refreshToken - The new refresh token to store, or null to remove it
+   * @returns {Promise<UpdateResult>} The result of the update operation
+   *
+   * @example
+   * // Set a new refresh token
+   * await usersService.updateRefreshToken('user-id', 'hashedRefreshToken');
+   *
+   * @example
+   * // Remove refresh token (logout)
+   * await usersService.updateRefreshToken('user-id', null);
+   */
+  public async updateRefreshToken(term: string, refreshToken: string | null) {
+    return this.userRepository.update(term, { refreshToken: refreshToken });
+  }
+}

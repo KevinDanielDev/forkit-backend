@@ -1,4 +1,4 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { BeforeInsert, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('users')
 export class User {
@@ -55,4 +55,16 @@ export class User {
     nullable: false,
   })
   password: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  refreshToken?: string | null;
+
+  @BeforeInsert()
+  prepareData() {
+    this.email = this.email.toLowerCase().trim();
+    this.phone = this.phone.trim();
+    this.firstName = this.firstName.trim();
+    this.lastName = this.lastName.trim();
+    this.codeCountry = this.codeCountry.trim();
+  }
 }
