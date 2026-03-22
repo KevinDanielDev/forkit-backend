@@ -76,7 +76,7 @@ npm run start:dev
 npm run start:prod
 ```
 
-The API will be available at `http://localhost:3000/api/v1`
+The API will be available at `http://localhost:3000/api`
 
 ## API Endpoints
 
