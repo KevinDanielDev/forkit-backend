@@ -3,9 +3,9 @@ import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 import { CreateUserDto } from 'src/users/dto/signup-user.dto';
+import { SigninUserDto } from 'src/users/dto/signin-user.dto';
 
 import { Public } from './constants/jwt.constants';
-import { SigninUserDto } from 'src/users/dto/signin-user.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -27,5 +27,10 @@ export class AuthController {
   @Post('refreshAccessToken')
   refreshAccessToken(@Body() refreshToken: string) {
     return this.authService.refreshAccessToken(refreshToken);
+  }
+
+  @Post('logOut')
+  logOut(@Body() term: string) {
+    return this.authService.logOut(term);
   }
 }

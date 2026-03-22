@@ -183,7 +183,8 @@ export class AuthService {
   public async logOut(term: string) {
     try {
       const user = await this.usersService.findByTerm(term);
-      if (!user) throw new UnauthorizedException();
+
+      if (user) throw new UnauthorizedException();
 
       await this.usersService.updateRefreshToken(term, null);
 
