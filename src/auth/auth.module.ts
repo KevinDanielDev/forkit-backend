@@ -14,6 +14,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 @Module({
   imports: [
     JwtModule.registerAsync({
+      global: true,
       imports: [],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({

@@ -11,6 +11,8 @@ import * as bcrypt from 'bcrypt';
 
 import { UsersService } from 'src/users/users.service';
 
+import { hashPassword } from 'src/common/utils/hash.util';
+
 import { SignUpUserDto } from 'src/users/dto/signup-user.dto';
 import { IPayload } from './interfaces/payload.interface';
 import { SigninUserDto } from 'src/users/dto/signin-user.dto';
@@ -54,7 +56,7 @@ export class AuthService {
 
       if (user) throw new BadRequestException('User already exists');
 
-      const hashedPassword = await bcrypt.hash(
+      const hashedPassword = await hashPassword(
         signUpUserDto.password,
         this.saltOrRounds,
       );
