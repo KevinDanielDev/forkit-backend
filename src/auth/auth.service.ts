@@ -15,13 +15,11 @@ import { CreateUserDto } from 'src/users/dto/signup-user.dto';
 import { IPayload } from './interfaces/payload.interface';
 import { SigninUserDto } from 'src/users/dto/signin-user.dto';
 
-/**
- * Service responsible for handling authentication operations.
- * Manages user registration, login, logout, and token refresh functionality.
- */
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+
+  private readonly saltOrRounds = 10;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -56,10 +54,9 @@ export class AuthService {
 
       if (user) throw new BadRequestException('User already exists');
 
-      const saltOrRounds = 10;
       const hashedPassword = await bcrypt.hash(
         createUserDto.password,
-        saltOrRounds,
+        this.saltOrRounds,
       );
 
       const newUser = await this.usersService.create({
@@ -76,16 +73,6 @@ export class AuthService {
       };
 
       const jwtTokens = await this.generateJwtTokens(payload);
-
-      const hashedRefreshToken = await bcrypt.hash(
-        jwtTokens.refreshToken,
-        saltOrRounds,
-      );
-
-      await this.usersService.updateRefreshToken(
-        payload.id,
-        hashedRefreshToken,
-      );
 
       return {
         jwtTokens: {
@@ -261,9 +248,7 @@ export class AuthService {
    * // Returns: { accessToken: '...', refreshToken: '...' }
    */
   private async generateJwtTokens(payload: IPayload) {
-    const saltOrRounds = 10;
-
-    const hashRefreshToken = await bcrypt.hash(payload.id, saltOrRounds);
+    const hashRefreshToken = await bcrypt.hash(payload.id, this.saltOrRounds);
 
     await this.usersService.updateRefreshToken(payload.id, hashRefreshToken);
 
