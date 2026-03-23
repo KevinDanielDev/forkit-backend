@@ -11,7 +11,7 @@ import { Repository } from 'typeorm';
 import { isEmail, isUUID } from 'class-validator';
 
 import { User } from './entities/user.entity';
-import { CreateUserDto } from './dto/signup-user.dto';
+import { SignUpUserDto } from './dto/signup-user.dto';
 
 /**
  * Service responsible for managing user-related operations.
@@ -87,9 +87,9 @@ export class UsersService {
    *   phone: '+1234567890'
    * });
    */
-  public async create(createUserDto: CreateUserDto) {
+  public async create(signUpUserDto: SignUpUserDto) {
     try {
-      const user = this.userRepository.create(createUserDto);
+      const user = this.userRepository.create(signUpUserDto);
 
       return await this.userRepository.save(user);
     } catch (error) {

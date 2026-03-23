@@ -11,7 +11,7 @@ import * as bcrypt from 'bcrypt';
 
 import { UsersService } from 'src/users/users.service';
 
-import { CreateUserDto } from 'src/users/dto/signup-user.dto';
+import { SignUpUserDto } from 'src/users/dto/signup-user.dto';
 import { IPayload } from './interfaces/payload.interface';
 import { SigninUserDto } from 'src/users/dto/signin-user.dto';
 
@@ -31,7 +31,7 @@ export class AuthService {
    * Validates that the user doesn't already exist, hashes the password,
    * creates the user, and generates JWT tokens.
    *
-   * @param {CreateUserDto} createUserDto - The user registration data
+   * @param {SignUpUserDto} signUpUserDto - The user registration data
    * @returns {Promise<Object>} An object containing JWT tokens and user information
    * @returns {Object} return.jwtTokens - The generated access and refresh tokens
    * @returns {string} return.jwtTokens.accessToken - JWT access token (expires in 1h)
@@ -48,19 +48,19 @@ export class AuthService {
    * });
    * // Returns: { jwtTokens: { accessToken: '...', refreshToken: '...' }, user: { email: '...', ... } }
    */
-  async signUp(createUserDto: CreateUserDto) {
+  async signUp(signUpUserDto: SignUpUserDto) {
     try {
-      const user = await this.usersService.findByTerm(createUserDto.email);
+      const user = await this.usersService.findByTerm(signUpUserDto.email);
 
       if (user) throw new BadRequestException('User already exists');
 
       const hashedPassword = await bcrypt.hash(
-        createUserDto.password,
+        signUpUserDto.password,
         this.saltOrRounds,
       );
 
       const newUser = await this.usersService.create({
-        ...createUserDto,
+        ...signUpUserDto,
         password: hashedPassword,
       });
 
