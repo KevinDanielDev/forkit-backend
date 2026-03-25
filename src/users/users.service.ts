@@ -5,13 +5,20 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { JwtService } from '@nestjs/jwt';
 
 import { Repository } from 'typeorm';
 
 import { isEmail, isUUID } from 'class-validator';
 
+import bcrypt from 'bcrypt';
+
 import { User } from './entities/user.entity';
-import { CreateUserDto } from './dto/signup-user.dto';
+import { SignUpUserDto } from './dto/signup-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { IPayload } from 'src/auth/interfaces/payload.interface';
+import { hashPassword } from 'src/common/utils/hash.util';
+import { removeKeys } from 'src/common/utils/remove-keys.util';
 
 /**
  * Service responsible for managing user-related operations.
@@ -23,6 +30,7 @@ export class UsersService {
 
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    private readonly jwtService: JwtService,
   ) {}
 
   /**
@@ -87,9 +95,9 @@ export class UsersService {
    *   phone: '+1234567890'
    * });
    */
-  public async create(createUserDto: CreateUserDto) {
+  public async create(signUpUserDto: SignUpUserDto) {
     try {
-      const user = this.userRepository.create(createUserDto);
+      const user = this.userRepository.create(signUpUserDto);
 
       return await this.userRepository.save(user);
     } catch (error) {
@@ -118,5 +126,90 @@ export class UsersService {
    */
   public async updateRefreshToken(term: string, refreshToken: string | null) {
     return this.userRepository.update(term, { refreshToken: refreshToken });
+  }
+
+  /**
+   * Updates the user profile information.
+   *
+   * @param {string} token - The JWT token containing the user ID
+   * @param {UpdateUserDto} updateUserDto - The data transfer object containing the user information to update
+   * @returns {Promise<{ message: string; user: Partial<User> }>}
+   *          An object containing a success message and the updated user data (without sensitive information).
+   * @throws {InternalServerErrorException} When an unexpected error occurs during user update.
+   * @throws {NotFoundException} When the user identified by the token is not found in the database.
+   *
+   * @example
+   * // Update user profile with new first name, last name, and password
+   * const result = await usersService.update(token, {
+   *   firstName: 'John',
+   *   lastName: 'Doe',
+   *   password: 'newPassword'
+   * });
+   *
+   * @example
+   * // Update only the first name
+   * const result = await usersService.update(token, {
+   *   firstName: 'Jane',
+   *   lastName: null,
+   *   password: null
+   * });
+   *
+   * @example
+   * // Attempt to update with all fields empty (returns early with success message)
+   * const result = await usersService.update(token, {
+   *   firstName: '',
+   *   lastName: null,
+   *   password: ''
+   * });
+   */
+  public async update(token: string, updateUserDto: UpdateUserDto) {
+    const message: string = 'User updated successfully';
+
+    const { id }: IPayload = await this.jwtService.verify(token);
+    try {
+      const user = await this.findByTerm(id);
+
+      if (!user) throw new NotFoundException('User not found');
+
+      const userWithoutSensitiveData = removeKeys(user);
+
+      const { firstName, lastName, password } = updateUserDto;
+      const updatedUser: Partial<User> = {};
+
+      if (firstName && firstName !== user.firstName)
+        updatedUser.firstName = firstName;
+
+      if (lastName && lastName !== user.lastName)
+        updatedUser.lastName = lastName;
+
+      if (password && !(await bcrypt.compare(password, user.password))) {
+        const hashedPassword = await hashPassword(password, 10);
+        updatedUser.password = hashedPassword;
+      }
+
+      if (Object.keys(updatedUser).length === 0) {
+        return {
+          message: message,
+          user: userWithoutSensitiveData,
+        };
+      }
+
+      await this.userRepository.update(id, updatedUser);
+
+      const restUser = removeKeys(updatedUser);
+
+      return {
+        message: message,
+        user: restUser,
+      };
+    } catch (error) {
+      this.logger.error(error);
+
+      if (error instanceof NotFoundException) throw error;
+
+      throw new InternalServerErrorException(
+        'Internal server error, please review logs',
+      );
+    }
   }
 }

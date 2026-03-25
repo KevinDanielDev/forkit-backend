@@ -2,7 +2,7 @@ import { Controller, Post, Body } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
 
-import { CreateUserDto } from 'src/users/dto/signup-user.dto';
+import { SignUpUserDto } from 'src/users/dto/signup-user.dto';
 import { SigninUserDto } from 'src/users/dto/signin-user.dto';
 
 import { Public } from './constants/jwt.constants';
@@ -13,8 +13,8 @@ export class AuthController {
 
   @Public()
   @Post('signUp')
-  signUp(@Body() createUserDto: CreateUserDto) {
-    return this.authService.signUp(createUserDto);
+  signUp(@Body() signUpUserDto: SignUpUserDto) {
+    return this.authService.signUp(signUpUserDto);
   }
 
   @Public()

@@ -9,7 +9,7 @@ import {
   IsOptional,
 } from 'class-validator';
 
-export class CreateUserDto {
+export class SignUpUserDto {
   @IsUUID()
   @IsOptional()
   id?: string;
