@@ -1,5 +1,7 @@
 import { BeforeInsert, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
+import { ERoles } from 'src/common/models/enums/roles.enum';
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -45,10 +47,10 @@ export class User {
   @Column({
     type: 'simple-array',
     nullable: false,
-    default: 'admin',
-    enum: ['admin', 'customer'],
+    default: ERoles.ADMIN,
+    enum: [ERoles.ADMIN, ERoles.CUSTOMER],
   })
-  roles: string[];
+  roles: ERoles[];
 
   @Column({
     type: 'boolean',
@@ -74,6 +76,8 @@ export class User {
     this.firstName = this.firstName.trim();
     this.lastName = this.lastName.trim();
     this.codeCountry = this.codeCountry.trim();
-    this.roles = this.roles.map((role) => role.toLowerCase().trim());
+    this.roles = this.roles.map((role) =>
+      role.toLowerCase().trim(),
+    ) as ERoles[];
   }
 }
