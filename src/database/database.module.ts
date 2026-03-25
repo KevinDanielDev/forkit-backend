@@ -13,8 +13,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_DATABASE'),
-        autoLoadEntities: true,
-        synchronize: true,
+        autoLoadEntities:
+          configService.get<string>('NODE_ENV') === 'production' ? false : true,
+        synchronize:
+          configService.get<string>('NODE_ENV') === 'production' ? false : true,
         retryAttempts: 3,
         retryDelay: 5000,
       }),
