@@ -11,11 +11,14 @@ import { Repository } from 'typeorm';
 
 import { isEmail, isUUID } from 'class-validator';
 
+import bcrypt from 'bcrypt';
+
 import { User } from './entities/user.entity';
 import { SignUpUserDto } from './dto/signup-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { IPayload } from 'src/auth/interfaces/payload.interface';
 import { hashPassword } from 'src/common/utils/hash.util';
+import { removeKeys } from 'src/common/utils/remove-keys.util';
 
 /**
  * Service responsible for managing user-related operations.
@@ -130,16 +133,33 @@ export class UsersService {
    *
    * @param {string} token - The JWT token containing the user ID
    * @param {UpdateUserDto} updateUserDto - The data transfer object containing the user information to update
-   * @returns {Promise<{ message: string }>} The result of the update operation
-   * @throws {InternalServerErrorException} When an error occurs during user update
-   * @throws {NotFoundException} When the user is not found
+   * @returns {Promise<{ message: string; user: Partial<User> }>}
+   *          An object containing a success message and the updated user data (without sensitive information).
+   * @throws {InternalServerErrorException} When an unexpected error occurs during user update.
+   * @throws {NotFoundException} When the user identified by the token is not found in the database.
    *
    * @example
-   * // Update user profile
-   * const result = await usersService.update({
+   * // Update user profile with new first name, last name, and password
+   * const result = await usersService.update(token, {
    *   firstName: 'John',
    *   lastName: 'Doe',
    *   password: 'newPassword'
+   * });
+   *
+   * @example
+   * // Update only the first name
+   * const result = await usersService.update(token, {
+   *   firstName: 'Jane',
+   *   lastName: null,
+   *   password: null
+   * });
+   *
+   * @example
+   * // Attempt to update with all fields empty (returns early with success message)
+   * const result = await usersService.update(token, {
+   *   firstName: '',
+   *   lastName: null,
+   *   password: ''
    * });
    */
   public async update(token: string, updateUserDto: UpdateUserDto) {
@@ -151,35 +171,32 @@ export class UsersService {
 
       if (!user) throw new NotFoundException('User not found');
 
-      const userValues = Object.values(updateUserDto);
-      const isEmpty = userValues.every(
-        (value) => value === null || value === undefined || value === '',
-      );
+      const userWithoutSensitiveData = removeKeys(user);
 
-      if (isEmpty) {
+      const { firstName, lastName, password } = updateUserDto;
+      const updatedUser: Partial<User> = {};
+
+      if (firstName && firstName !== user.firstName)
+        updatedUser.firstName = firstName;
+
+      if (lastName && lastName !== user.lastName)
+        updatedUser.lastName = lastName;
+
+      if (password && !(await bcrypt.compare(password, user.password))) {
+        const hashedPassword = await hashPassword(password, 10);
+        updatedUser.password = hashedPassword;
+      }
+
+      if (Object.keys(updatedUser).length === 0) {
         return {
           message: message,
-          user: user,
+          user: userWithoutSensitiveData,
         };
       }
 
-      const { firstName, lastName, password } = updateUserDto;
+      await this.userRepository.update(id, updatedUser);
 
-      if (firstName && firstName !== user.firstName) user.firstName = firstName;
-      if (lastName && lastName !== user.lastName) user.lastName = lastName;
-
-      if (password && password !== user.password) {
-        const hashedPassword = await hashPassword(password, 10);
-        user.password = hashedPassword;
-      }
-
-      // TODO: Change to update
-      await this.userRepository.save(user);
-
-      this.logger.log(`User ${user.id} updated successfully`);
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password: _password, id: _id, ...restUser } = user;
+      const restUser = removeKeys(updatedUser);
 
       return {
         message: message,
