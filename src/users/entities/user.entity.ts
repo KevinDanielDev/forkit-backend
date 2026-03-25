@@ -43,6 +43,14 @@ export class User {
   email: string;
 
   @Column({
+    type: 'simple-array',
+    nullable: false,
+    default: 'admin',
+    enum: ['admin', 'customer'],
+  })
+  roles: string[];
+
+  @Column({
     type: 'boolean',
     nullable: false,
     default: true,
@@ -66,5 +74,6 @@ export class User {
     this.firstName = this.firstName.trim();
     this.lastName = this.lastName.trim();
     this.codeCountry = this.codeCountry.trim();
+    this.roles = this.roles.map((role) => role.toLowerCase().trim());
   }
 }
